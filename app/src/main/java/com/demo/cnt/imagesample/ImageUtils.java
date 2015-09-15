@@ -67,10 +67,10 @@ public class ImageUtils {
         }
     };
 
-    /*
-    * return a bitmap with width = screen's width
-    * keep the ratio
-    */
+    /**
+     * return a bitmap with width = screen's width
+     * keep the ratio
+     */
     public static Bitmap scaleBitmap(Activity activity, String imagePath) throws Exception {
         Bitmap srcBitmap = loadBitmap(imagePath);
         Display display = activity.getWindowManager().getDefaultDisplay();
@@ -84,7 +84,9 @@ public class ImageUtils {
         return Bitmap.createScaledBitmap(srcBitmap, screenWidth, scaledHeight, false);
     }
 
-    /*load bitmap from file path*/
+    /**
+     * load bitmap from file path
+     */
     public static Bitmap loadBitmap(String imagePath) throws Exception {
         return BitmapFactory.decodeStream(new FileInputStream(imagePath));
     }
