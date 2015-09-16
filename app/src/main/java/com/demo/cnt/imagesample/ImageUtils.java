@@ -12,6 +12,7 @@ import android.provider.MediaStore;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
 import java.io.File;
@@ -23,13 +24,17 @@ import java.util.Locale;
 
 public class ImageUtils {
 
+    private static int rawX = 0;
+    private static int rawY = 0;
+    private static boolean isZooming = false;
+
     public static void loadImage(Activity activity, Uri uri, RelativeLayout layout, boolean isCapture) {
         Bitmap bitmap = null;
         String path;
         path = isCapture ? uri.getPath() : getRealPathFromURI(activity, uri);
 
         try {
-            bitmap = loadBitmap( path);
+            bitmap = scaleBitmap(activity, path);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -38,9 +43,9 @@ public class ImageUtils {
             if (layout.getChildCount() > 0) {
                 layout.removeAllViews();
             }
-            TouchImageView imageView = new TouchImageView(activity);
+            ImageView imageView = new ImageView(activity);
             imageView.setImageBitmap(bitmap);
-//            imageView.setOnTouchListener(moveListener);
+            imageView.setOnTouchListener(moveListener);
             layout.addView(imageView);
         }
     }
@@ -49,16 +54,33 @@ public class ImageUtils {
     public static View.OnTouchListener moveListener = new View.OnTouchListener() {
         @Override
         public boolean onTouch(View view, MotionEvent motionEvent) {
-            int eid = motionEvent.getAction();
-            switch (eid) {
-                case MotionEvent.ACTION_MOVE:
 
-                    RelativeLayout.LayoutParams mParams = (RelativeLayout.LayoutParams) view.getLayoutParams();
-                    int x = (int) motionEvent.getRawX();
-                    int y = (int) motionEvent.getRawY();
-                    mParams.leftMargin = x-50;
-                    mParams.topMargin = y-50;
-                    view.setLayoutParams(mParams);
+            switch (motionEvent.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    break;
+                case MotionEvent.ACTION_UP:
+                    rawX = 0;
+                    rawY = 0;
+                    break;
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    isZooming = true;
+                    break;
+                case MotionEvent.ACTION_POINTER_UP:
+                    isZooming = false;
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    if(!isZooming) {
+                        int x = (int) motionEvent.getRawX();
+                        int y = (int) motionEvent.getRawY();
+                        if (rawX != 0) {
+                            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) view.getLayoutParams();
+                            params.leftMargin = params.leftMargin + (x - rawX);
+                            params.topMargin = params.topMargin + (y - rawY);
+                            view.setLayoutParams(params);
+                        }
+                        rawX = x;
+                        rawY = y;
+                    }
                     break;
                 default:
                     break;
