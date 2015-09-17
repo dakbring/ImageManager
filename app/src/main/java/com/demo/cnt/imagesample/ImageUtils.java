@@ -5,18 +5,17 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Point;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.view.Display;
-import android.view.MotionEvent;
-import android.view.View;
-import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -24,17 +23,13 @@ import java.util.Locale;
 
 public class ImageUtils {
 
-    private static int rawX = 0;
-    private static int rawY = 0;
-    private static boolean isZooming = false;
-
     public static void loadImage(Activity activity, Uri uri, RelativeLayout layout, boolean isCapture) {
         Bitmap bitmap = null;
         String path;
         path = isCapture ? uri.getPath() : getRealPathFromURI(activity, uri);
 
         try {
-            bitmap = scaleBitmap(activity, path);
+            bitmap = scaleBitmapFitScreenWidth(activity, path);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -43,63 +38,25 @@ public class ImageUtils {
             if (layout.getChildCount() > 0) {
                 layout.removeAllViews();
             }
-            ImageView imageView = new ImageView(activity);
+            TouchImageView imageView = new TouchImageView(activity);
             imageView.setImageBitmap(bitmap);
-            imageView.setOnTouchListener(moveListener);
+            imageView.setMinZoom((float).5);
+            imageView.setBackgroundColor(Color.parseColor("#ff0099cc"));
             layout.addView(imageView);
         }
     }
-
-    //TODO: Optimize listener to move image
-    public static View.OnTouchListener moveListener = new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View view, MotionEvent motionEvent) {
-
-            switch (motionEvent.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    break;
-                case MotionEvent.ACTION_UP:
-                    rawX = 0;
-                    rawY = 0;
-                    break;
-                case MotionEvent.ACTION_POINTER_DOWN:
-                    isZooming = true;
-                    break;
-                case MotionEvent.ACTION_POINTER_UP:
-                    isZooming = false;
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    if(!isZooming) {
-                        int x = (int) motionEvent.getRawX();
-                        int y = (int) motionEvent.getRawY();
-                        if (rawX != 0) {
-                            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) view.getLayoutParams();
-                            params.leftMargin = params.leftMargin + (x - rawX);
-                            params.topMargin = params.topMargin + (y - rawY);
-                            view.setLayoutParams(params);
-                        }
-                        rawX = x;
-                        rawY = y;
-                    }
-                    break;
-                default:
-                    break;
-            }
-            return true;
-        }
-    };
 
     /**
      * return a bitmap with width = screen's width
      * keep the ratio
      */
-    public static Bitmap scaleBitmap(Activity activity, String imagePath) throws Exception {
+    public static Bitmap scaleBitmapFitScreenWidth(Activity activity, String imagePath) throws Exception {
         Bitmap srcBitmap = loadBitmap(imagePath);
         Display display = activity.getWindowManager().getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
 
-        int screenWidth = size.x;
+        int screenWidth = 500;
         double ratio = (double) srcBitmap.getWidth() / (double) srcBitmap.getHeight();
         int scaledHeight = (int) ((double) screenWidth / ratio);
 
@@ -110,7 +67,30 @@ public class ImageUtils {
      * load bitmap from file path
      */
     public static Bitmap loadBitmap(String imagePath) throws Exception {
-        return BitmapFactory.decodeStream(new FileInputStream(imagePath));
+        Bitmap bm = BitmapFactory.decodeFile(imagePath);
+        Matrix matrix = new Matrix();
+
+        /*check the orientation state of loaded bitmap*/
+        switch (getBitmapOrientation(imagePath)){
+            case ExifInterface.ORIENTATION_ROTATE_90:
+                matrix.postRotate(90);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_180:
+                matrix.postRotate(180);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_270:
+                matrix.postRotate(270);
+                break;
+            default:
+                matrix.postRotate(0);
+        }
+        return Bitmap.createBitmap(bm, 0, 0, bm.getWidth(), bm.getHeight(), matrix, true);
+    }
+
+    public static int getBitmapOrientation(String imagePath)throws Exception{
+        File imageFile = new File(imagePath);
+        ExifInterface exifInterface = new ExifInterface(imageFile.getAbsolutePath());
+        return exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
     }
 
     private static String getRealPathFromURI(Activity activity, Uri contentUri) {
@@ -134,6 +114,7 @@ public class ImageUtils {
         if (imageCursor.moveToFirst()) {
             selectedImagePath = imageCursor.getString(imageCursor.getColumnIndex(MediaStore.Images.Media.DATA));
         }
+        imageCursor.close();
         return selectedImagePath;
     }
 
