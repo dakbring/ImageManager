@@ -56,7 +56,7 @@ public class ImageUtils {
         Point size = new Point();
         display.getSize(size);
 
-        int screenWidth = 500;
+        int screenWidth = size.x;
         double ratio = (double) srcBitmap.getWidth() / (double) srcBitmap.getHeight();
         int scaledHeight = (int) ((double) screenWidth / ratio);
 
