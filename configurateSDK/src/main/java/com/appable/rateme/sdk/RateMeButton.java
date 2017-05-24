@@ -1,7 +1,11 @@
 package com.appable.rateme.sdk;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageItemInfo;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.support.v7.widget.AppCompatImageButton;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
@@ -53,15 +57,28 @@ public class RateMeButton extends AppCompatImageButton implements View.OnTouchLi
 
         gestureDetector = new GestureDetector(getContext(), new SingleTapConfirm());
 
-        PackageItemInfo ci = getContext().getApplicationInfo();
-
-        this.virtualID = ci.metaData.getString("com.appable.rateme.sdk.VirtualDeviceID");
+        this.virtualID = getMetaData((Activity)getContext(),"com.appable.rateme.sdk.VirtualDeviceID");
 
         this.virtualDefaultUrl = this.virtualDefaultUrl + this.virtualID;
 
         //Adding platform parameter
         this.virtualDefaultUrl += "?platfom=" + GlobalVariables.SDK_ANDROID_PLATFORM;
 
+    }
+
+    private String getMetaData(Activity activity, String name) {
+        try {
+            ActivityInfo ai = activity.getPackageManager().getActivityInfo(activity.getComponentName(), PackageManager.GET_META_DATA);
+            Bundle metaData = ai.metaData;
+            if (metaData == null) {
+                throw new Exception("metaData is null. Unable to get meta data for " + name);
+            } else {
+                return metaData.getString(name);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 

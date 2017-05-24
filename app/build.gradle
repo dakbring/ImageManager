@@ -24,4 +24,4 @@ dependencies {
     compile project(':configurateSDK')
 }
 
-//apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.google.gms.google-services'
